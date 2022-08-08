@@ -66,7 +66,7 @@ function cssValidation() {
 
             if (!res.valid) console.log(res.errors);
 
-            if (files.length === ++counter) resolve('finished');
+            if (filesFiltered.length === ++counter) resolve('finished');
           });
         });
       });
