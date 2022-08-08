@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "validate": "node full.js",
-    "editorconfig": "editorconfig-checker -exclude libs"
+    "editorconfig": "editorconfig-checker -exclude libs",
+    "all": "node full.js && editorconfig-checker -exclude libs"
   },
   "author": "",
   "license": "ISC",
