@@ -1,0 +1,6 @@
+{
+  "htmlFiles": "./**/*.html",
+  "cssFiles": "./**/*.css",
+  "ignore": ["node_modules", "libs", "bootstrap-5"]
+}
+

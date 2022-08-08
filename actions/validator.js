@@ -4,10 +4,12 @@ import fs from 'fs';
 import chalk from 'chalk';
 import { w3cHtmlValidator } from 'w3c-html-validator';
 
+import DATA from './settings.json' assert {type: 'json'};
+
 const log = console.log;
-const HTML_FILES = './**/*.html';
-const CSS_FILES = './**/*.css';
-const EXCLUDE_FILES = ['node_modules', 'libs', 'bootstrap-5'];
+const HTML_FILES = DATA.htmlFiles;
+const CSS_FILES = DATA.cssFiles;
+const EXCLUDE_FILES = DATA.ignore;
 
 // Тестирование HTML
 function htmlValidation() {
