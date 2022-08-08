@@ -1,0 +1,2 @@
+node ../full
+pause
