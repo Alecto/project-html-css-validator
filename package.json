@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "validate": "node --no-warnings actions/validator.js",
-    "editorconfig": "editorconfig-checker -exclude libs",
-    "all": "node --no-warnings actions/validator.js && editorconfig-checker -exclude libs"
+    "editorconfig": "editorconfig-checker -exclude **/libs",
+    "all": "node --no-warnings actions/validator.js && editorconfig-checker -exclude **/libs"
   },
   "author": "",
   "license": "ISC",
