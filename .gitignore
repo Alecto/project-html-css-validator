@@ -1,8 +1,8 @@
 node_modules/
 .idea/
 .vscode/
+
 .DS_Store
 *-lock.json
 desktop.ini
-*-home-work.js
-JS-for-test-home-work.js
+tests/*.js
