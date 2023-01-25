@@ -12,7 +12,7 @@
   "license": "ISC",
   "devDependencies": {
     "chalk": "^5.0.1",
-    "editorconfig-checker": "^4.0.2",
+    "editorconfig-checker": "^5.0.1",
     "w3c-css-validator": "^1.3.0",
     "w3c-html-validator": "^1.1.0"
   },
