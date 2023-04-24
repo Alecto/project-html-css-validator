@@ -12,85 +12,89 @@ const CSS_FILES = DATA.cssFiles;
 const EXCLUDE_FILES = DATA.ignore;
 
 // Тестирование HTML
-function htmlValidation() {
-  let counter = 0;
+async function htmlValidation() {
+  const filesFiltered = excludeFiles(await glob(HTML_FILES))
+  let counter = 0
+
+  if (!filesFiltered.length) return null;
+
+  printTitle(filesFiltered.length, 'HTML');
 
   return new Promise((resolve, reject) => {
-    glob(HTML_FILES, (err, files) => {
-      let filesFiltered = files.filter(
-        (file) => !EXCLUDE_FILES.some((str) => file.indexOf(str) !== -1)
-      );
+    filesFiltered.forEach((file) => {
+      fs.readFile(file, 'utf8', (err, data) => {
+        if (err) reject('Ошибка чтения HTML файла');
 
-      printTitle(filesFiltered.length, 'HTML');
-
-      if (!filesFiltered.length) resolve(null);
-
-      filesFiltered.forEach((file) => {
-        fs.readFile(file, 'utf8', (err, data) => {
-          if (err) return;
-
-          w3cHtmlValidator
-            .validate({ filename: file })
-            .then((res) => {
-              w3cHtmlValidator.reporter(res, {
-                continueOnFail: true,
-                maxMessageLen: 200
-              });
-              if (filesFiltered.length === ++counter) resolve('ok'); // Не используется, но можно отследить результат
-            })
-            .catch(() => resolve('errors')); // Не используется, но можно отследить ошибку
-        });
+        w3cHtmlValidator
+          .validate({ filename: file })
+          .then((reult) => {
+            w3cHtmlValidator.reporter(reult, { continueOnFail: true, maxMessageLen: 200 });
+            if (filesFiltered.length === ++counter) {
+              log('\n'); // Добавляем пустую строку вконце проверки блока HTML
+              resolve('ok');
+            }
+          })
+          .catch(() => reject('Что-то пошло не так при проверке HTML.')); // Не используется, но можно отследить ошибку
       });
     });
-  });
+  })
 }
 
 // Тестирование CSS
-function cssValidation() {
-  return new Promise((resolve) => {
-    let counter = 0;
+async function cssValidation() {
+  const filesFiltered = excludeFiles(await glob(CSS_FILES))
+  let counter = 0
 
-    glob(CSS_FILES, function (err, files) {
-      let filesFiltered = files.filter(
-        (file) => !EXCLUDE_FILES.some((str) => file.indexOf(str) !== -1)
-      );
+  if (!filesFiltered.length) return null;
 
-      printTitle(filesFiltered.length, 'CSS');
+  printTitle(filesFiltered.length, 'CSS');
 
-      if (!filesFiltered.length) resolve(null);
+  return new Promise((resolve, reject) => {
+    filesFiltered.forEach((file) => {
+      fs.readFile(file, 'utf8', (err, data) => {
+        if (err) return;
 
-      filesFiltered.forEach((file) => {
-        fs.readFile(file, 'utf8', (err, data) => {
-          if (err) return;
-
-          validateCSS(data).then((res) => {
-            console.log(' ----- Тестирование файла... ----- ');
+        validateCSS(data)
+          .then((res) => {
+            log(' ----- Тестирование файла... ----- ');
 
             if (res.valid) {
-              log(
-                ` ${chalk.green.bold(file)} ${chalk.black.bgGreen(
-                  ' Валиден '
-                )} `
-              );
+              log(` ${chalk.green.bold(file)} ${chalk.black.bgGreen(' Валиден ')} `);
             } else {
-              log(
-                ` ${chalk.red.bold(file)} ${chalk.white.bgRed(' НЕ валиден ')} `
-              );
+              log(` ${chalk.red.bold(file)} ${chalk.white.bgRed(' НЕ валиден ')} `);
+              log(res.errors)
             }
 
-            if (!res.valid) console.log(res.errors);
-
-            if (filesFiltered.length === ++counter) resolve('finished');
-          });
-        });
+            if (filesFiltered.length === ++counter) {
+              resolve('ok');
+              log('\n');
+            }
+          })
+          .catch(() =>  {
+            reject('Что-то пошло не так при проверке CSS.'); // Не используется, но можно отследить ошибку
+          })
       });
     });
-  });
+  })
 }
+
+log(''); // Добавление пустой строки перед тестами
+
+htmlValidation()
+  .then((res) => {
+    // console.log(res); // Блок отладки ответа CSS валидатора
+    return cssValidation()
+  })
+  .then((res) => {
+    // console.log(res); // Блок отладки ответа CSS валидатора
+  })
+  .catch((err) => console.error(err));
+
 
 function printTitle(count, msg) {
   if (count) {
-    log(chalk.bgBlue(` Тестирование ${msg} `));
+    log(chalk.bgBlue(` Тестирование ${count} файлов ${msg} `));
+    log('')
     return;
   }
 
@@ -98,25 +102,17 @@ function printTitle(count, msg) {
 }
 
 async function validateCSS(data) {
-  if (!data) {
-    return { valid: true, errors: [] }; // объект с отсуствием ошибок, если файл пустой
-  }
+  if (!data) return { valid: true, errors: [] }; // объект с отсуствием ошибок, если файл пустой
 
-  const result = await cssValidator.validateText(data, {
-    medium: 'all',
-    timeout: 3000
-  });
+  const result = await cssValidator
+    .validateText(data, {
+      medium: 'all',
+      timeout: 3000
+    });
 
   return result;
 }
 
-console.log('\n');
-
-htmlValidation()
-  .then((res) => {
-    console.log('\n');
-    cssValidation().then(() => {
-      console.log('\n');
-    });
-  })
-  .catch(() => { });
+function excludeFiles (files) {
+  return files.filter((file) => !EXCLUDE_FILES.some((str) => file.indexOf(str) !== -1));
+}
