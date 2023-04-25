@@ -13,112 +13,75 @@ const EXCLUDE_FILES = DATA.ignore;
 
 // Тестирование HTML
 async function htmlValidation() {
-  const filesFiltered = excludeFiles(await glob(HTML_FILES))
-  let counter = 0
-
+  const filesFiltered = excludeFiles(await glob(HTML_FILES));
   if (!filesFiltered.length) return null;
-
   printTitle(filesFiltered.length, 'HTML');
 
-  return new Promise((resolve, reject) => {
-    filesFiltered.forEach((file, index) => {
-      fs.readFile(file, 'utf8', (err, data) => {
-        if (err) reject('Ошибка чтения HTML файла');
-        // Устанавливаем небольшую задержку, чтобы меньше нагружать сервер + решаются проблемы сортировки ответов
-        setTimeout(() => {
-          w3cHtmlValidator.validate({ filename: file })
-          .then((reult) => {
-            w3cHtmlValidator.reporter(reult, { continueOnFail: true, maxMessageLen: 200 });
+  for (const file of filesFiltered) {
+    try {
+      const data = await fs.promises.readFile(file, 'utf8');
+      const result = await w3cHtmlValidator.validate({ filename: file });
+      w3cHtmlValidator.reporter(result, { continueOnFail: true, maxMessageLen: 200 });
+    } catch (err) {
+      console.error(`Ошибка чтения или проверки HTML файла: ${file}`, err);
+    }
+  }
 
-            if (filesFiltered.length === ++counter) {
-              log('\n'); // Добавляем пустую строку вконце проверки блока HTML
-              resolve('ok');
-            }
-          })
-          .catch(() => reject('Что-то пошло не так при проверке HTML.')); // Не используется, но можно отследить ошибку
-        }, index * 100)
-
-      });
-    });
-  })
+  log('\n');
 }
 
 // Тестирование CSS
 async function cssValidation() {
-  const filesFiltered = excludeFiles(await glob(CSS_FILES))
-  let counter = 0
-
+  const filesFiltered = excludeFiles(await glob(CSS_FILES));
   if (!filesFiltered.length) return null;
-
   printTitle(filesFiltered.length, 'CSS');
 
-  return new Promise((resolve, reject) => {
-    filesFiltered.forEach((file) => {
-      fs.readFile(file, 'utf8', (err, data) => {
-        if (err) return;
+  for (const file of filesFiltered) {
+    try {
+      const data = await fs.promises.readFile(file, 'utf8');
+      const res = await validateCSS(data);
+      log(' ----- Тестирование файла... ----- ');
 
-        validateCSS(data)
-          .then((res) => {
-            log(' ----- Тестирование файла... ----- ');
-
-            if (res.valid) {
-              log(` ${chalk.green.bold(file)} ${chalk.black.bgGreen(' Валиден ')} `);
-            } else {
-              log(` ${chalk.red.bold(file)} ${chalk.white.bgRed(' НЕ валиден ')} `);
-              log(res.errors)
-            }
-
-            if (filesFiltered.length === ++counter) {
-              resolve('ok'); // Заканчиваем проверку с ответом 'ok'
-              log('\n');
-            }
-          })
-          .catch(() =>  {
-            reject('Что-то пошло не так при проверке CSS.'); // Не используется, но можно отследить ошибку
-          })
-      });
-    });
-  })
-}
-
-log(''); // Добавление пустой строки перед тестами
-
-htmlValidation()
-  .then((res) => {
-    // console.log(res); // Блок отладки ответа CSS валидатора
-    return cssValidation()
-  })
-  .then((res) => {
-    // console.log(res); // Блок отладки ответа CSS валидатора
-  })
-  .catch((err) => console.error(err));
-
-
-function printTitle(count, msg) {
-  if (count) {
-    log(chalk.bgBlue(` Тестирование ${count} файлов ${msg} `));
-    log('')
-
-    return;
+      if (res.valid) {
+        log(` ${chalk.green.bold(file)} ${chalk.black.bgGreen(' Валиден ')} `);
+      } else {
+        log(` ${chalk.red.bold(file)} ${chalk.white.bgRed(' НЕ валиден ')} `);
+        log(res.errors);
+      }
+    } catch (err) {
+      console.error(`Ошибка чтения CSS файла: ${file}`);
+    }
   }
 
-  log(chalk.inverse(` ${msg} файлов нет, проверка не выполнялась `));
+  log('\n');
+}
+
+(async () => {
+  try {
+    log(''); // Добавление пустой строки перед тестами
+    const htmlValidationResult = await htmlValidation();
+    const cssValidationResult = await cssValidation();
+    // console.log(htmlValidationResult); // Блок отладки ответа HTML валидатора
+    // console.log(cssValidationResult); // Блок отладки ответа CSS валидатора
+  } catch (err) {
+    console.error(err);
+  }
+})();
+
+function printTitle(count, msg) {
+  log(count
+    ? chalk.bgBlue(` Тестирование ${count} файлов ${msg} \n`)
+    : chalk.inverse(` ${msg} файлов нет, проверка не выполнялась `)
+  );
 }
 
 async function validateCSS(data) {
   if (!data) return { valid: true, errors: [] }; // объект с отсуствием ошибок, если файл пустой
-
-  const result = await cssValidator
-    .validateText(data, {
-      medium: 'all',
-      timeout: 3000
-    });
-
-  return result;
+  return cssValidator.validateText(data, { medium: 'all', timeout: 3000});
 }
 
-function excludeFiles (files) {
+function excludeFiles(files) {
   return files
     .sort()
-    .filter((file) => !EXCLUDE_FILES.some((str) => file.indexOf(str) !== -1));
+    .filter((file) => !EXCLUDE_FILES.some((str) => file.includes(str)));
 }
