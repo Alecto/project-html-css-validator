@@ -21,20 +21,23 @@ async function htmlValidation() {
   printTitle(filesFiltered.length, 'HTML');
 
   return new Promise((resolve, reject) => {
-    filesFiltered.forEach((file) => {
+    filesFiltered.forEach((file, index) => {
       fs.readFile(file, 'utf8', (err, data) => {
         if (err) reject('Ошибка чтения HTML файла');
-
-        w3cHtmlValidator
-          .validate({ filename: file })
+        // Устанавливаем небольшую задержку, чтобы меньше нагружать сервер + решаются проблемы сортировки ответов
+        setTimeout(() => {
+          w3cHtmlValidator.validate({ filename: file })
           .then((reult) => {
             w3cHtmlValidator.reporter(reult, { continueOnFail: true, maxMessageLen: 200 });
+
             if (filesFiltered.length === ++counter) {
               log('\n'); // Добавляем пустую строку вконце проверки блока HTML
               resolve('ok');
             }
           })
           .catch(() => reject('Что-то пошло не так при проверке HTML.')); // Не используется, но можно отследить ошибку
+        }, index * 100)
+
       });
     });
   })
@@ -66,7 +69,7 @@ async function cssValidation() {
             }
 
             if (filesFiltered.length === ++counter) {
-              resolve('ok');
+              resolve('ok'); // Заканчиваем проверку с ответом 'ok'
               log('\n');
             }
           })
@@ -95,6 +98,7 @@ function printTitle(count, msg) {
   if (count) {
     log(chalk.bgBlue(` Тестирование ${count} файлов ${msg} `));
     log('')
+
     return;
   }
 
@@ -114,5 +118,7 @@ async function validateCSS(data) {
 }
 
 function excludeFiles (files) {
-  return files.filter((file) => !EXCLUDE_FILES.some((str) => file.indexOf(str) !== -1));
+  return files
+    .sort()
+    .filter((file) => !EXCLUDE_FILES.some((str) => file.indexOf(str) !== -1));
 }
