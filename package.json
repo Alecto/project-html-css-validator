@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "validate": "node --no-warnings actions/validator.js",
-    "editorconfig": "editorconfig-checker -exclude \"(libs|img|psd|bootstrap|normalize\\.|reset\\.)\"",
+    "editorconfig": "editorconfig-checker -exclude \"(libs|img|psd|bootstrap|node_modules|normalize\\.|reset\\.)\"",
     "all": "node --no-warnings actions/validator.js && editorconfig-checker -exclude \"(libs|img|psd|bootstrap|normalize\\.|reset\\.)\""
   },
   "author": "",
