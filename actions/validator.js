@@ -1,4 +1,4 @@
-import glob from 'glob';
+import { glob } from 'glob';
 import cssValidator from 'w3c-css-validator';
 import fs from 'fs';
 import chalk from 'chalk';
