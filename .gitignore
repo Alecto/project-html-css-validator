@@ -3,7 +3,6 @@ node_modules/
 .vscode/
 
 .DS_Store
-*-lock.json
 desktop.ini
 tests/*.js
 tests/**/*.*
