@@ -1,12 +1,12 @@
 {
   "name": "@alecto/project-html-css-validator",
-  "version": "4.0.3",
+  "version": "4.0.4",
   "description": "",
   "main": "index.js",
   "scripts": {
     "validate": "node --no-warnings actions/validator.js",
-    "editorconfig": "editorconfig-checker -exclude \"(libs|img|psd|bootstrap|node_modules|normalize\\.|reset\\.)\"",
-    "all": "node --no-warnings actions/validator.js && editorconfig-checker -exclude \"(libs|img|psd|bootstrap|normalize\\.|reset\\.)\""
+    "editorconfig": "editorconfig-checker -exclude \"(libs|img|psd|bootstrap|node_modules|normalize\\.|reset\\.|\\.git)\"",
+    "all": "node --no-warnings actions/validator.js && editorconfig-checker -exclude \"(libs|img|psd|bootstrap|node_modules|normalize\\.|reset\\.|\\.git)\""
   },
   "author": "",
   "license": "ISC",
