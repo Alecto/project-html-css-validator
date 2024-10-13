@@ -15,7 +15,7 @@ const EXCLUDE_FILES = DATA.ignore;
 async function htmlValidation() {
   const filesFiltered = excludeFiles(await glob(HTML_FILES));
   if (!filesFiltered.length) {
-    log('HTML файлів немає, перевірка не виконувалася');
+    log('HTML файлів немає, перевірка не виконувалася\n\n');
     return null;
   }
   printTitle(filesFiltered.length, 'HTML');
