@@ -14,7 +14,10 @@ const EXCLUDE_FILES = DATA.ignore;
 // Тестирование HTML
 async function htmlValidation() {
   const filesFiltered = excludeFiles(await glob(HTML_FILES));
-  if (!filesFiltered.length) return null;
+  if (!filesFiltered.length) {
+    log('HTML файлів немає, перевірка не виконувалася');
+    return null;
+  }
   printTitle(filesFiltered.length, 'HTML');
 
   for (const file of filesFiltered) {
@@ -23,7 +26,7 @@ async function htmlValidation() {
       const result = await w3cHtmlValidator.validate({ filename: file });
       w3cHtmlValidator.reporter(result, { continueOnFail: true, maxMessageLen: 200 });
     } catch (err) {
-      console.error(`Ошибка чтения или проверки HTML файла: ${file}`, err);
+      console.error(`Помилка читання або перевірки HTML файлу: ${file}`, err);
     }
   }
 
@@ -40,16 +43,16 @@ async function cssValidation() {
     try {
       const data = await fs.promises.readFile(file, 'utf8');
       const res = await validateCSS(data);
-      log(' ----- Тестирование файла... ----- ');
+      log(' ----- Тестування файлу... ----- ');
 
       if (res.valid) {
-        log(` ${chalk.green.bold(file)} ${chalk.black.bgGreen(' Валиден ')} `);
+        log(` ${chalk.green.bold(file)} ${chalk.black.bgGreen(' Валідний ')} `);
       } else {
-        log(` ${chalk.red.bold(file)} ${chalk.white.bgRed(' НЕ валиден ')} `);
+        log(` ${chalk.red.bold(file)} ${chalk.white.bgRed(' НЕ валідний ')} `);
         log(res.errors);
       }
     } catch (err) {
-      console.error(`Ошибка чтения CSS файла: ${file}`);
+      console.error(`Помилка читання CSS файлу: ${file}`);
     }
   }
 
@@ -70,8 +73,8 @@ async function cssValidation() {
 
 function printTitle(count, msg) {
   log(count
-    ? chalk.bgBlue(` Тестирование ${count} файлов ${msg} \n`)
-    : chalk.inverse(` ${msg} файлов нет, проверка не выполнялась `)
+    ? chalk.bgBlue(` Тестування ${count} файлів ${msg} \n`)
+    : chalk.inverse(` ${msg} файлів немає, перевірка не виконувалася `)
   );
 }
 
