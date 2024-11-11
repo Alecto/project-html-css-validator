@@ -4,7 +4,8 @@ import fs from 'fs';
 import chalk from 'chalk';
 import { w3cHtmlValidator } from 'w3c-html-validator';
 
-import DATA from './settings.json' assert { type: 'json' };
+// Заміна динамічного імпорту на зчитування JSON через fs.promises
+const DATA = JSON.parse(await fs.promises.readFile(new URL('./settings.json', import.meta.url), 'utf8'));
 
 const log = console.log;
 const HTML_FILES = DATA.htmlFiles;
