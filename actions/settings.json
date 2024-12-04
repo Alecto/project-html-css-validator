@@ -1,5 +1,5 @@
 {
   "htmlFiles": "./**/*.html",
   "cssFiles": "./**/*.css",
-  "ignore": ["node_modules", "libs", "bootstrap-5", "normalize.css", "bootstrap.", "reset.css"]
+  "ignore": ["node_modules", "libs", "bootstrap", "bootstrap-5", "normalize.css", "bootstrap.", "reset.css"]
 }
