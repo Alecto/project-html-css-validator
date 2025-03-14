@@ -37,23 +37,42 @@ async function htmlValidation() {
 // Тестирование CSS
 async function cssValidation() {
   const filesFiltered = excludeFiles(await glob(CSS_FILES));
+
   if (!filesFiltered.length) return null;
   printTitle(filesFiltered.length, 'CSS');
 
   for (const file of filesFiltered) {
     try {
       const data = await fs.promises.readFile(file, 'utf8');
-      const res = await validateCSS(data);
-      log(' ----- Тестування файлу... ----- ');
+      try {
+        const res = await validateCSS(data);
+        log(' ----- Тестування файлу... ----- ');
 
-      if (res.valid) {
-        log(` ${chalk.green.bold(file)} ${chalk.black.bgGreen(' Валідний ')} `);
-      } else {
-        log(` ${chalk.red.bold(file)} ${chalk.white.bgRed(' НЕ валідний ')} `);
-        log(res.errors);
+        if (res.valid) {
+          log(` ${chalk.green.bold(file)} ${chalk.black.bgGreen(' Валідний ')} `);
+        } else {
+          log(` ${chalk.red.bold(file)} ${chalk.white.bgRed(' НЕ валідний ')} `);
+          if (res.errors && res.errors.length) {
+            res.errors.forEach(error => {
+              log(chalk.red(`Рядок ${error.line}: ${error.message}`));
+            });
+          } else {
+            log(chalk.red('Невідома помилка валідації'));
+          }
+        }
+      } catch (validationError) {
+        if (validationError.statusCode === 429) {
+          log(chalk.yellow.bold('\nПомилка валідації CSS:'));
+          log(chalk.yellow('Перевищено ліміт запитів до сервера валідації (Too Many Requests).'));
+          log(chalk.yellow('Будь ласка, зачекайте кілька хвилин та спробуйте знову.'));
+        } else {
+          log(chalk.red.bold('\nПомилка валідації CSS:'));
+          log(chalk.red(validationError.message || 'Невідома помилка'));
+        }
       }
     } catch (err) {
-      console.error(`Помилка читання CSS файлу: ${file}`);
+      log(chalk.red.bold(`\nПомилка читання CSS файлу ${file}:`));
+      log(chalk.red(err.message));
     }
   }
 
@@ -62,11 +81,9 @@ async function cssValidation() {
 
 (async () => {
   try {
-    log(''); // Добавление пустой строки перед тестами
+    log('');
     const htmlValidationResult = await htmlValidation();
     const cssValidationResult = await cssValidation();
-    // console.log(htmlValidationResult); // Блок отладки ответа HTML валидатора
-    // console.log(cssValidationResult); // Блок отладки ответа CSS валидатора
   } catch (err) {
     console.error(err);
   }
@@ -80,8 +97,35 @@ function printTitle(count, msg) {
 }
 
 async function validateCSS(data) {
-  if (!data) return { valid: true, errors: [] }; // объект с отсуствием ошибок, если файл пустой
-  return cssValidator.validateText(data, { medium: 'all', timeout: 3000});
+  if (!data) return { valid: true, errors: [] };
+  
+  try {
+    const result = await cssValidator.validateText(data, { 
+      medium: 'all', 
+      timeout: 5000,
+      profile: 'css3',
+      warning: 'no'
+    });
+    
+    return result;
+  } catch (error) {
+    // Додаємо затримку при помилці Too Many Requests
+    if (error.statusCode === 429) {
+      await new Promise(resolve => setTimeout(resolve, 2000)); // 2 секунди затримки
+      try {
+        // Повторна спроба
+        return await cssValidator.validateText(data, { 
+          medium: 'all', 
+          timeout: 5000,
+          profile: 'css3',
+          warning: 'no'
+        });
+      } catch (retryError) {
+        throw retryError;
+      }
+    }
+    throw error;
+  }
 }
 
 function excludeFiles(files) {
