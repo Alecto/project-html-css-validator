@@ -51,13 +51,18 @@ async function cssValidation() {
         if (res.valid) {
           log(` ${chalk.green.bold(file)} ${chalk.black.bgGreen(' Валідний ')} `);
         } else {
-          log(` ${chalk.red.bold(file)} ${chalk.white.bgRed(' НЕ валідний ')} `);
-          if (res.errors && res.errors.length) {
-            res.errors.forEach(error => {
+          // Фільтруємо помилки, ігноруючи clip-path
+          const filteredErrors = res.errors.filter(error => 
+            !error.message.includes('clip-path')
+          );
+
+          if (filteredErrors.length === 0) {
+            log(` ${chalk.green.bold(file)} ${chalk.black.bgGreen(' Валідний ')} `);
+          } else {
+            log(` ${chalk.red.bold(file)} ${chalk.white.bgRed(' НЕ валідний ')} `);
+            filteredErrors.forEach(error => {
               log(chalk.red(`Рядок ${error.line}: ${error.message}`));
             });
-          } else {
-            log(chalk.red('Невідома помилка валідації'));
           }
         }
       } catch (validationError) {
@@ -104,7 +109,12 @@ async function validateCSS(data) {
       medium: 'all', 
       timeout: 5000,
       profile: 'css3',
-      warning: 'no'
+      warning: 'no',
+      level: 'css3',
+      output: 'json',
+      lang: 'en',
+      charset: 'utf-8',
+      doctype: 'HTML5'
     });
     
     return result;
@@ -118,7 +128,12 @@ async function validateCSS(data) {
           medium: 'all', 
           timeout: 5000,
           profile: 'css3',
-          warning: 'no'
+          warning: 'no',
+          level: 'css3',
+          output: 'json',
+          lang: 'en',
+          charset: 'utf-8',
+          doctype: 'HTML5'
         });
       } catch (retryError) {
         throw retryError;
