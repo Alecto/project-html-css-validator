@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "validate": "node --no-warnings actions/validator.js",
+    "validate": "node --no-warnings actions/index.mjs",
     "editorconfig": "editorconfig-checker -exclude \"(libs|img|psd|bootstrap|node_modules|normalize\\.|reset\\.|\\.git|actions)\" tests/",
-    "all": "node --no-warnings actions/validator.js && editorconfig-checker -exclude \"(libs|img|psd|bootstrap|node_modules|normalize\\.|reset\\.|\\.git|actions)\" tests/"
+    "all": "node --no-warnings actions/index.mjs && editorconfig-checker -exclude \"(libs|img|psd|bootstrap|node_modules|normalize\\.|reset\\.|\\.git|actions)\" tests/"
   },
   "author": "",
   "license": "ISC",

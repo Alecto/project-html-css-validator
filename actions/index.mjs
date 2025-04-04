@@ -1,49 +1,30 @@
 import { glob } from 'glob';
-import cssValidator from 'w3c-css-validator';
 import fs from 'fs';
 import chalk from 'chalk';
 import { w3cHtmlValidator } from 'w3c-html-validator';
-
-// Заміна динамічного імпорту на зчитування JSON через fs.promises
-const DATA = JSON.parse(await fs.promises.readFile(new URL('./settings.json', import.meta.url), 'utf8'));
+import { 
+  isSvgFile, 
+  isSvgSpecificError, 
+  printTitle, 
+  validateCSS,
+  excludeFiles 
+} from './helpers.mjs';
+import {
+  HTML_FILES_PATTERN,
+  CSS_FILES_PATTERN,
+  IGNORE_PATTERNS
+} from './constants.mjs';
 
 const log = console.log;
-const HTML_FILES = DATA.htmlFiles;
-const CSS_FILES = DATA.cssFiles;
-const EXCLUDE_FILES = DATA.ignore;
-
-// SVG-специфічні властивості для перевірки
-const SVG_PROPERTIES = [
-  'Property "fill" doesn\'t exist',
-  'Property "stroke" doesn\'t exist',
-  'Property "stroke-width" doesn\'t exist'
-];
-
-// Перевірка, чи є помилка SVG-специфічною
-function isSvgSpecificError(error) {
-  return SVG_PROPERTIES.some(prop => error.message.includes(prop));
-}
-
-// Перевірка, чи є файл SVG-файлом
-function isSvgFile(filePath) {
-  return filePath.includes('SVG-main');
-}
-
-// Фільтрація помилок, пов'язаних з SVG-властивостями
-function filterSvgErrors(errors) {
-  if (!errors || !errors.length) return errors;
-  
-  return errors.filter(error => !isSvgSpecificError(error));
-}
 
 // Тестирование HTML
 async function htmlValidation() {
-  const filesFiltered = excludeFiles(await glob(HTML_FILES));
+  const filesFiltered = excludeFiles(await glob(HTML_FILES_PATTERN), IGNORE_PATTERNS);
   if (!filesFiltered.length) {
     log('HTML файлів немає, перевірка не виконувалася\n\n');
     return null;
   }
-  printTitle(filesFiltered.length, 'HTML');
+  printTitle(log, filesFiltered.length, 'HTML');
 
   for (const file of filesFiltered) {
     try {
@@ -60,10 +41,10 @@ async function htmlValidation() {
 
 // Тестирование CSS
 async function cssValidation() {
-  const filesFiltered = excludeFiles(await glob(CSS_FILES));
+  const filesFiltered = excludeFiles(await glob(CSS_FILES_PATTERN), IGNORE_PATTERNS);
 
   if (!filesFiltered.length) return null;
-  printTitle(filesFiltered.length, 'CSS');
+  printTitle(log, filesFiltered.length, 'CSS');
 
   for (const file of filesFiltered) {
     try {
@@ -117,6 +98,7 @@ async function cssValidation() {
   log('\n');
 }
 
+// Головна функція запуску валідації
 (async () => {
   try {
     log('');
@@ -125,67 +107,4 @@ async function cssValidation() {
   } catch (err) {
     console.error(err);
   }
-})();
-
-function printTitle(count, msg) {
-  log(count
-    ? chalk.bgBlue(` Тестування ${count} файлів ${msg} \n`)
-    : chalk.inverse(` ${msg} файлів немає, перевірка не виконувалася `)
-  );
-}
-
-// Виконує запит до валідатора з заданими параметрами
-async function validateWithCssValidator(data, options) {
-  const defaultOptions = { 
-    medium: 'all', 
-    timeout: 5000,
-    profile: 'css3svg',
-    warning: 'no',
-    level: 'css3',
-    output: 'json',
-    lang: 'en',
-    charset: 'utf-8',
-    doctype: 'HTML5'
-  };
-  
-  const result = await cssValidator.validateText(data, options || defaultOptions);
-  
-  // Фільтруємо SVG-специфічні помилки
-  if (result.errors && result.errors.length) {
-    result.errors = filterSvgErrors(result.errors);
-    
-    // Якщо всі помилки відфільтровані, вважаємо файл валідним
-    if (result.errors.length === 0) {
-      result.valid = true;
-    }
-  }
-  
-  return result;
-}
-
-async function validateCSS(data) {
-  if (!data) return { valid: true, errors: [] };
-  
-  try {
-    return await validateWithCssValidator(data);
-  } catch (error) {
-    // Додаємо затримку при помилці Too Many Requests
-    if (error.statusCode === 429) {
-      await new Promise(resolve => setTimeout(resolve, 2000)); // 2 секунди затримки
-      
-      // Повторна спроба
-      try {
-        return await validateWithCssValidator(data);
-      } catch (retryError) {
-        throw retryError;
-      }
-    }
-    throw error;
-  }
-}
-
-function excludeFiles(files) {
-  return files
-    .sort()
-    .filter((file) => !EXCLUDE_FILES.some((str) => file.includes(str)));
-}
+})(); 
