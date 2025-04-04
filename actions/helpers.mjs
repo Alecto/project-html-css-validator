@@ -71,4 +71,53 @@ export function excludeFiles(files, excludePatterns) {
   return files
     .sort()
     .filter((file) => !excludePatterns.some((str) => file.includes(str)));
+}
+
+// Виведення повідомлень про помилки
+export function displayError(log, message, error) {
+  log(chalk.red.bold(`\n${message}:`));
+  log(chalk.red(error.message || 'Невідома помилка'));
+}
+
+// Виведення повідомлень про перевищення ліміту запитів
+export function displayRateLimitError(log) {
+  log(chalk.yellow.bold('\nПомилка валідації CSS:'));
+  log(chalk.yellow('Перевищено ліміт запитів до сервера валідації (Too Many Requests).'));
+  log(chalk.yellow('Будь ласка, зачекайте кілька хвилин та спробуйте знову.'));
+}
+
+// Обробка та відображення результатів CSS валідації
+export function displayCssValidationResult(log, file, validationResult) {
+  log(' ----- Тестування файлу... ----- ');
+
+  if (validationResult.valid) {
+    log(` ${chalk.green.bold(file)} ${chalk.black.bgGreen(' Валідний ')} `);
+    return;
+  }
+
+  // Фільтруємо помилки, ігноруючи clip-path
+  const filteredErrors = validationResult.errors.filter(error => 
+    !error.message.includes('clip-path')
+  );
+
+  if (filteredErrors.length === 0) {
+    log(` ${chalk.green.bold(file)} ${chalk.black.bgGreen(' Валідний ')} `);
+    return;
+  }
+
+  // Перевіряємо, чи це SVG-файл
+  if (isSvgFile(file)) {
+    log(` ${chalk.green.bold(file)} ${chalk.black.bgGreen(' Валідний (SVG) ')} `);
+    log(chalk.blue(`Файл містить SVG-властивості, але перевірений онлайн-валідатором W3C як валідний CSS3+SVG.`));
+    return;
+  }
+
+  // Файл не валідний, виводимо помилки
+  log(` ${chalk.red.bold(file)} ${chalk.white.bgRed(' НЕ валідний ')} `);
+  filteredErrors.forEach(error => {
+    // Виводимо тільки не-SVG помилки
+    if (!isSvgSpecificError(error)) {
+      log(chalk.red(`Рядок ${error.line}: ${error.message}`));
+    }
+  });
 } 
