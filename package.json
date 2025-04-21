@@ -14,7 +14,7 @@
     "chalk": "^5.4.1",
     "editorconfig-checker": "^6.0.1",
     "w3c-html-validator": "^1.8.3",
-    "w3c-css-validator": "^1.3.2"
+    "w3c-css-validator": "^1.4.0"
   },
   "type": "module"
 }
