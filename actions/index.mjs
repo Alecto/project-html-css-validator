@@ -1,8 +1,8 @@
 import { glob } from 'glob';
 import fs from 'fs';
 import { w3cHtmlValidator } from 'w3c-html-validator';
-import { 
-  printTitle, 
+import {
+  printTitle,
   validateCSS,
   excludeFiles,
   displayCssValidationResult,
@@ -14,14 +14,19 @@ import {
   CSS_FILES_PATTERN,
   IGNORE_PATTERNS
 } from './constants.mjs';
+import chalk from 'chalk';
 
 const log = console.log;
 
 // Тестирование HTML
 async function htmlValidation() {
-  const filesFiltered = excludeFiles(await glob(HTML_FILES_PATTERN), IGNORE_PATTERNS);
+  const filesFiltered = excludeFiles(
+    await glob(HTML_FILES_PATTERN),
+    IGNORE_PATTERNS
+  );
   if (!filesFiltered.length) {
-    log('HTML файлів немає, перевірка не виконувалася\n\n');
+    log(chalk.inverse(` HTML файлів немає, перевірка не виконувалася `));
+    log('\n');
     return null;
   }
   printTitle(log, filesFiltered.length, 'HTML');
@@ -30,7 +35,10 @@ async function htmlValidation() {
     try {
       const data = await fs.promises.readFile(file, 'utf8');
       const result = await w3cHtmlValidator.validate({ filename: file });
-      w3cHtmlValidator.reporter(result, { continueOnFail: true, maxMessageLen: 200 });
+      w3cHtmlValidator.reporter(result, {
+        continueOnFail: true,
+        maxMessageLen: 200
+      });
     } catch (err) {
       console.error(`Помилка читання або перевірки HTML файлу: ${file}`, err);
     }
@@ -41,9 +49,16 @@ async function htmlValidation() {
 
 // Тестирование CSS
 async function cssValidation() {
-  const filesFiltered = excludeFiles(await glob(CSS_FILES_PATTERN), IGNORE_PATTERNS);
+  const filesFiltered = excludeFiles(
+    await glob(CSS_FILES_PATTERN),
+    IGNORE_PATTERNS
+  );
 
-  if (!filesFiltered.length) return null;
+  if (!filesFiltered.length) {
+    log(chalk.inverse(` CSS файлів немає, перевірка не виконувалася `));
+    log('\n');
+    return null;
+  }
   printTitle(log, filesFiltered.length, 'CSS');
 
   for (const file of filesFiltered) {
@@ -76,4 +91,4 @@ async function cssValidation() {
   } catch (err) {
     console.error(err);
   }
-})(); 
+})();
