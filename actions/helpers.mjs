@@ -1,6 +1,10 @@
 import cssValidator from 'w3c-css-validator';
 import chalk from 'chalk';
-import { DEFAULT_CSS_VALIDATOR_OPTIONS } from './constants.mjs';
+import {
+  DEFAULT_CSS_VALIDATOR_OPTIONS,
+  GLOBAL_IGNORE_DIRS
+} from './constants.mjs';
+import path from 'path';
 
 // Виведення заголовка для валідації
 export function printTitle(log, count, msg) {
@@ -43,9 +47,37 @@ export async function validateCSS(data) {
 
 // Виключення файлів з перевірки
 export function excludeFiles(files, excludePatterns) {
-  return files
-    .sort()
-    .filter((file) => !excludePatterns.some((str) => file.includes(str)));
+  return files.sort().filter((file) => {
+    // Спочатку перевіряємо глобальні ігнорування
+    for (const ignoreDir of GLOBAL_IGNORE_DIRS) {
+      if (file.includes(ignoreDir)) {
+        return false;
+      }
+    }
+
+    const parts = file.split(path.sep);
+
+    console.log(parts);
+
+    // Обробка файлів у директорії tests/
+    if (parts[0] === 'tests') {
+      // Перевірка наступних елементів шляху після tests/dir/ (частини з індексами 2 і вище)
+      for (let i = 2; i < parts.length; i++) {
+        const part = parts[i];
+        for (const pattern of excludePatterns) {
+          if (part.includes(pattern)) {
+            return false;
+          }
+        }
+      }
+
+      // Якщо жодний патерн не співпав у частинах шляху після tests/dir/
+      return true;
+    }
+
+    // Файли поза каталогом tests/ ми не перевіряємо
+    return false;
+  });
 }
 
 // Виведення повідомлень про помилки
