@@ -2,8 +2,9 @@ node_modules/
 .idea/
 .vscode/
 
-.cursorrules
 .DS_Store
 desktop.ini
-tests/*.js
-tests/**/*.*
+
+# Ігнорувати всі файли в папці tests, крім двох .bat файлів
+tests/*
+!tests/*.bat
