@@ -24,6 +24,7 @@ async function htmlValidation() {
     await glob(HTML_FILES_PATTERN),
     IGNORE_PATTERNS
   );
+
   if (!filesFiltered.length) {
     log(chalk.inverse(` HTML файлів немає, перевірка не виконувалася `));
     log('\n');
