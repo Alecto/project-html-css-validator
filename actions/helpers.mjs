@@ -8,11 +8,13 @@ import path from 'path';
 
 // Виведення заголовка для валідації
 export function printTitle(log, count, msg) {
+  log('');
   log(
     count
-      ? chalk.bgBlue(` Тестування ${count} файлів ${msg} \n`)
+      ? chalk.bgBlue(` Тестування ${count} файлів ${msg} `)
       : chalk.inverse(` ${msg} файлів немає, перевірка не виконувалася `)
   );
+  log('');
 }
 
 // Виконує запит до валідатора з заданими параметрами
@@ -157,7 +159,7 @@ export function getErrorMessage(result) {
  * @returns {Promise<Object|null>} - результат валідації або null у випадку помилки
  */
 export async function validateWithRetries(file, validator, logger, chalk) {
-  // Спроба 1
+  // Спроба 1 (без затримки)
   try {
     logger(chalk.dim(`Валідація файлу ${file}...`));
     const result = await validator.validate({ filename: file });
@@ -166,13 +168,13 @@ export async function validateWithRetries(file, validator, logger, chalk) {
       return result; // Успішна валідація з першої спроби
     }
 
-    // Є помилки, спробуємо знову
+    // Є помилки, спробуємо знову через 2 секунди
     const errorMessage = getErrorMessage(result);
     logger(chalk.yellow('\nВиявлено проблему з підключенням до валідатора:'));
     logger(chalk.yellow(`${errorMessage}`));
-    logger(chalk.yellow('Очікування 5 секунд перед повторною спробою...'));
+    logger(chalk.yellow('Очікування 2 секунди перед повторною спробою...'));
 
-    await wait(5000);
+    await wait(2000);
 
     // Спроба 2
     logger(chalk.yellow(`Виконую повторну спробу для файлу ${file}...`));
@@ -183,10 +185,10 @@ export async function validateWithRetries(file, validator, logger, chalk) {
       return retryResult; // Успішна валідація з другої спроби
     }
 
-    // Все ще є помилки, спробуємо втретє
+    // Все ще є помилки, спробуємо втретє через 5 секунд
     logger(chalk.yellow('\nПерша повторна спроба неуспішна.'));
-    logger(chalk.yellow('Очікування 10 секунд перед третьою спробою...'));
-    await wait(10000);
+    logger(chalk.yellow('Очікування 5 секунд перед третьою спробою...'));
+    await wait(5000);
 
     // Спроба 3
     logger(chalk.yellow(`Виконую третю спробу для файлу ${file}...`));
@@ -213,11 +215,11 @@ export async function validateWithRetries(file, validator, logger, chalk) {
           '\nПеревищено ліміт запитів до валідатора (429 Too Many Requests).'
         )
       );
-      logger(chalk.yellow('Очікування 5 секунд перед повторною спробою...'));
-      await wait(5000);
+      logger(chalk.yellow('Очікування 2 секунди перед повторною спробою...'));
+      await wait(2000);
 
       try {
-        // Спроба 2 (після виключення)
+        // Спроба 2 (після виключення) - через 2 секунди
         logger(chalk.yellow(`Виконую повторну спробу для файлу ${file}...`));
         const retryResult = await validator.validate({ filename: file });
 
@@ -226,10 +228,10 @@ export async function validateWithRetries(file, validator, logger, chalk) {
           return retryResult;
         }
 
-        // Спроба 3 (після виключення)
+        // Спроба 3 (після виключення) - через 5 секунд
         logger(chalk.yellow('\nПерша повторна спроба неуспішна.'));
-        logger(chalk.yellow('Очікування 10 секунд перед третьою спробою...'));
-        await wait(10000);
+        logger(chalk.yellow('Очікування 5 секунд перед третьою спробою...'));
+        await wait(5000);
 
         logger(chalk.yellow(`Виконую третю спробу для файлу ${file}...`));
         const thirdResult = await validator.validate({ filename: file });
@@ -248,12 +250,12 @@ export async function validateWithRetries(file, validator, logger, chalk) {
         // Обробка помилок під час повторних спроб після виключення
         if (retryErr.statusCode === 429) {
           try {
-            // Фінальна спроба після двох виключень
+            // Фінальна спроба після двох виключень - через 5 секунд
             logger(chalk.yellow('\nПерша повторна спроба неуспішна.'));
             logger(
-              chalk.yellow('Очікування 10 секунд перед третьою спробою...')
+              chalk.yellow('Очікування 5 секунд перед третьою спробою...')
             );
-            await wait(10000);
+            await wait(5000);
 
             logger(chalk.yellow(`Виконую третю спробу для файлу ${file}...`));
             const thirdResult = await validator.validate({ filename: file });

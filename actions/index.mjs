@@ -42,13 +42,47 @@ async function htmlValidation() {
       chalk
     );
 
-    // Виводимо результат, якщо він не null
-    if (result) {
-      log(chalk.green('Виведення результатів валідації:'));
-      w3cHtmlValidator.reporter(result, {
-        continueOnFail: true,
-        maxMessageLen: 200
-      });
+    // Якщо результат null (валідація не вдалася після всіх спроб)
+    if (result === null) {
+      log(
+        chalk.red.bold(
+          '[ПОМИЛКА] Валідація HTML зупинена через невдалу перевірку файлу після всіх спроб'
+        )
+      );
+      log('');
+      log(chalk.yellow('Переходимо до валідації CSS файлів...'));
+      log('');
+      return null;
+    }
+
+    // Виводимо результат
+    log(chalk.green('Виведення результатів валідації:'));
+    w3cHtmlValidator.reporter(result, {
+      continueOnFail: true,
+      maxMessageLen: 200
+    });
+
+    // Перевіряємо, чи має файл помилки валідації (не мережеві помилки)
+    if (
+      result.messages &&
+      result.messages.length > 0 &&
+      !result.messages.every(
+        (msg) =>
+          msg.subType === 'network-error' ||
+          msg.message?.includes('429 Too Many Requests')
+      )
+    ) {
+      // Якщо знайдено невалідний HTML файл - зупиняємо перевірку
+      log(
+        chalk.red.bold(
+          '[ПОМИЛКА] Валідація HTML зупинена через виявлення невалідного файлу'
+        )
+      );
+      log('');
+      log(chalk.yellow('Переходимо до валідації CSS файлів...'));
+      log('');
+      log('');
+      return null;
     }
   }
 
