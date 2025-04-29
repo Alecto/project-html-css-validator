@@ -7,7 +7,8 @@ import {
   excludeFiles,
   displayCssValidationResult,
   displayError,
-  displayRateLimitError
+  displayRateLimitError,
+  validateWithRetries
 } from './helpers.mjs';
 import {
   HTML_FILES_PATTERN,
@@ -33,15 +34,21 @@ async function htmlValidation() {
   printTitle(log, filesFiltered.length, 'HTML');
 
   for (const file of filesFiltered) {
-    try {
-      const data = await fs.promises.readFile(file, 'utf8');
-      const result = await w3cHtmlValidator.validate({ filename: file });
+    // Валідуємо файл з можливими повторними спробами
+    const result = await validateWithRetries(
+      file,
+      w3cHtmlValidator,
+      log,
+      chalk
+    );
+
+    // Виводимо результат, якщо він не null
+    if (result) {
+      log(chalk.green('Виведення результатів валідації:'));
       w3cHtmlValidator.reporter(result, {
         continueOnFail: true,
         maxMessageLen: 200
       });
-    } catch (err) {
-      console.error(`Помилка читання або перевірки HTML файлу: ${file}`, err);
     }
   }
 

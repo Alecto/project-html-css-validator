@@ -57,8 +57,6 @@ export function excludeFiles(files, excludePatterns) {
 
     const parts = file.split(path.sep);
 
-    console.log(parts);
-
     // Обробка файлів у директорії tests/
     if (parts[0] === 'tests') {
       // Перевірка наступних елементів шляху після tests/dir/ (частини з індексами 2 і вище)
@@ -111,4 +109,176 @@ export function displayCssValidationResult(log, file, validationResult) {
   validationResult.errors.forEach((error) => {
     log(chalk.red(`Рядок ${error.line}: ${error.message}`));
   });
+}
+
+/**
+ * Чекає вказану кількість мілісекунд
+ * @param {number} ms - кількість мілісекунд для очікування
+ * @returns {Promise<void>}
+ */
+export function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Перевіряє, чи має результат валідації помилки мережі або ліміту запитів
+ * @param {Object} result - результат валідації
+ * @returns {boolean} - true якщо є помилки, false якщо немає
+ */
+export function hasValidationError(result) {
+  return (
+    result.messages?.some((msg) => msg.subType === 'network-error') ||
+    result.messages?.some((msg) =>
+      msg.message?.includes('429 Too Many Requests')
+    )
+  );
+}
+
+/**
+ * Отримує текст помилки з результату валідації
+ * @param {Object} result - результат валідації
+ * @returns {string} - повідомлення про помилку
+ */
+export function getErrorMessage(result) {
+  const networkError = result.messages?.find(
+    (msg) => msg.subType === 'network-error'
+  );
+  return networkError
+    ? networkError.message
+    : 'Перевищено ліміт запитів (429 Too Many Requests)';
+}
+
+/**
+ * Виконує валідацію HTML з декількома повторними спробами
+ * @param {string} file - шлях до файлу для валідації
+ * @param {Object} validator - об'єкт валідатора
+ * @param {Function} logger - функція логування
+ * @param {Object} chalk - об'єкт для кольорового виводу
+ * @returns {Promise<Object|null>} - результат валідації або null у випадку помилки
+ */
+export async function validateWithRetries(file, validator, logger, chalk) {
+  // Спроба 1
+  try {
+    logger(chalk.dim(`Валідація файлу ${file}...`));
+    const result = await validator.validate({ filename: file });
+
+    if (!hasValidationError(result)) {
+      return result; // Успішна валідація з першої спроби
+    }
+
+    // Є помилки, спробуємо знову
+    const errorMessage = getErrorMessage(result);
+    logger(chalk.yellow('\nВиявлено проблему з підключенням до валідатора:'));
+    logger(chalk.yellow(`${errorMessage}`));
+    logger(chalk.yellow('Очікування 5 секунд перед повторною спробою...'));
+
+    await wait(5000);
+
+    // Спроба 2
+    logger(chalk.yellow(`Виконую повторну спробу для файлу ${file}...`));
+    const retryResult = await validator.validate({ filename: file });
+
+    if (!hasValidationError(retryResult)) {
+      logger(chalk.green('Повторна спроба успішна.'));
+      return retryResult; // Успішна валідація з другої спроби
+    }
+
+    // Все ще є помилки, спробуємо втретє
+    logger(chalk.yellow('\nПерша повторна спроба неуспішна.'));
+    logger(chalk.yellow('Очікування 10 секунд перед третьою спробою...'));
+    await wait(10000);
+
+    // Спроба 3
+    logger(chalk.yellow(`Виконую третю спробу для файлу ${file}...`));
+    const thirdResult = await validator.validate({ filename: file });
+
+    if (!hasValidationError(thirdResult)) {
+      logger(chalk.green('Третя спроба успішна.'));
+      return thirdResult; // Успішна валідація з третьої спроби
+    }
+
+    // Після трьох спроб все ще є помилки
+    logger(chalk.red.bold('\nПомилка валідації HTML:'));
+    logger(
+      chalk.red(
+        'Перевищено ліміт запитів до сервера після трьох спроб. Спробуйте пізніше.'
+      )
+    );
+    return null;
+  } catch (err) {
+    // Обробка винятків при валідації
+    if (err.statusCode === 429) {
+      logger(
+        chalk.yellow(
+          '\nПеревищено ліміт запитів до валідатора (429 Too Many Requests).'
+        )
+      );
+      logger(chalk.yellow('Очікування 5 секунд перед повторною спробою...'));
+      await wait(5000);
+
+      try {
+        // Спроба 2 (після виключення)
+        logger(chalk.yellow(`Виконую повторну спробу для файлу ${file}...`));
+        const retryResult = await validator.validate({ filename: file });
+
+        if (!hasValidationError(retryResult)) {
+          logger(chalk.green('Повторна спроба успішна.'));
+          return retryResult;
+        }
+
+        // Спроба 3 (після виключення)
+        logger(chalk.yellow('\nПерша повторна спроба неуспішна.'));
+        logger(chalk.yellow('Очікування 10 секунд перед третьою спробою...'));
+        await wait(10000);
+
+        logger(chalk.yellow(`Виконую третю спробу для файлу ${file}...`));
+        const thirdResult = await validator.validate({ filename: file });
+
+        if (!hasValidationError(thirdResult)) {
+          logger(chalk.green('Третя спроба успішна.'));
+          return thirdResult;
+        }
+
+        logger(chalk.red.bold('\nПомилка після третьої спроби:'));
+        logger(
+          chalk.red('Перевищено ліміт запитів до сервера. Спробуйте пізніше.')
+        );
+        return null;
+      } catch (retryErr) {
+        // Обробка помилок під час повторних спроб після виключення
+        if (retryErr.statusCode === 429) {
+          try {
+            // Фінальна спроба після двох виключень
+            logger(chalk.yellow('\nПерша повторна спроба неуспішна.'));
+            logger(
+              chalk.yellow('Очікування 10 секунд перед третьою спробою...')
+            );
+            await wait(10000);
+
+            logger(chalk.yellow(`Виконую третю спробу для файлу ${file}...`));
+            const thirdResult = await validator.validate({ filename: file });
+
+            logger(chalk.green('Третя спроба успішна.'));
+            return thirdResult;
+          } catch (thirdErr) {
+            logger(chalk.red.bold('\nПомилка після третьої спроби:'));
+            logger(
+              chalk.red(
+                'Перевищено ліміт запитів до сервера. Спробуйте пізніше.'
+              )
+            );
+            return null;
+          }
+        } else {
+          logger(chalk.red.bold('\nПомилка при повторній валідації HTML:'));
+          logger(chalk.red(retryErr.message || 'Невідома помилка'));
+          return null;
+        }
+      }
+    } else {
+      logger(chalk.red.bold('\nПомилка валідації HTML:'));
+      logger(chalk.red(err.message || 'Невідома помилка'));
+      return null;
+    }
+  }
 }
