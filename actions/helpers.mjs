@@ -102,13 +102,22 @@ export function displayRateLimitError(log) {
 export function displayCssValidationResult(log, file, validationResult) {
   log(' ----- Тестування файлу... ----- ');
 
+  // Використовуємо path.posix для коректного відображення шляху
+  const formattedFile = path.posix.normalize(file.split(path.sep).join('/'));
+
   if (validationResult.valid) {
-    log(` ${chalk.green.bold(file)} ${chalk.black.bgGreen(' Валідний ')} `);
+    log(
+      ` ${chalk.green.bold(formattedFile)} ${chalk.black.bgGreen(
+        ' Валідний '
+      )} `
+    );
     return;
   }
 
   // Файл не валідний, виводимо помилки
-  log(` ${chalk.red.bold(file)} ${chalk.white.bgRed(' НЕ валідний ')} `);
+  log(
+    ` ${chalk.red.bold(formattedFile)} ${chalk.white.bgRed(' НЕ валідний ')} `
+  );
   validationResult.errors.forEach((error) => {
     log(chalk.red(`Рядок ${error.line}: ${error.message}`));
   });

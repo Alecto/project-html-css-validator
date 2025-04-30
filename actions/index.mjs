@@ -15,6 +15,7 @@ import {
   IGNORE_PATTERNS
 } from './constants.mjs';
 import chalk from 'chalk';
+import path from 'path';
 
 const log = console.log;
 
@@ -31,7 +32,10 @@ async function htmlValidation() {
     return null;
   }
   printTitle(log, filesFiltered.length, 'HTML');
-  log(chalk.green('Виведення результатів валідації:'));
+  log(chalk.inverse.green(' Виведення результатів HTML валідації: '));
+
+  // Змінна для відстеження наявності помилок у попередньому файлі
+  let previousFileHadErrors = false;
 
   for (const file of filesFiltered) {
     try {
@@ -59,34 +63,43 @@ async function htmlValidation() {
         return null;
       }
 
-      // Виводимо результат
-      w3cHtmlValidator.reporter(result, {
-        continueOnFail: true,
-        maxMessageLen: 200
-      });
-
       // Перевіряємо, чи має файл помилки валідації (не мережеві помилки)
-      if (
+      const hasErrors =
         result.messages &&
         result.messages.length > 0 &&
         !result.messages.every(
           (msg) =>
             msg.subType === 'network-error' ||
             msg.message?.includes('429 Too Many Requests')
-        )
-      ) {
-        // Якщо знайдено невалідний HTML файл - зупиняємо перевірку
+        );
+
+      if (hasErrors) {
+        // Додаємо порожній рядок перед повідомленням про помилку тільки якщо попередній файл не мав помилок
+        if (!previousFileHadErrors) {
+          log('');
+        }
         log(
           chalk.red.bold(
-            '[ПОМИЛКА] Валідація HTML зупинена через виявлення невалідного файлу'
+            `[ПОМИЛКА] Виявлено невалідний HTML файл: ${path.posix.normalize(
+              file.split(path.sep).join('/')
+            )}`
           )
         );
-        log('');
-        log(chalk.yellow('Переходимо до валідації CSS файлів...'));
-        log('');
-        log('');
-        return null;
       }
+
+      // Виводимо результат
+      w3cHtmlValidator.reporter(result, {
+        continueOnFail: true,
+        maxMessageLen: 200
+      });
+
+      // Додаємо порожній рядок після звіту про помилки, але тільки якщо файл має помилки
+      if (hasErrors) {
+        log('');
+      }
+
+      // Оновлюємо статус помилок для наступної ітерації
+      previousFileHadErrors = hasErrors;
     } catch (err) {
       displayError(log, `Помилка обробки HTML файлу ${file}`, err);
       log('');
@@ -112,7 +125,10 @@ async function cssValidation() {
     return null;
   }
   printTitle(log, filesFiltered.length, 'CSS');
-  log(chalk.green('Виведення результатів валідації:'));
+  log(chalk.inverse.green('Виведення результатів CSS валідації:'));
+
+  // Змінна для відстеження наявності помилок у попередньому файлі
+  let previousFileHadErrors = false;
 
   for (const file of filesFiltered) {
     try {
@@ -134,20 +150,32 @@ async function cssValidation() {
         return null;
       }
 
-      displayCssValidationResult(log, file, result);
-
-      // Якщо файл не валідний, зупиняємо подальшу перевірку
+      // Якщо файл не валідний, показуємо повідомлення перед виведенням деталей
       if (!result.valid) {
+        // Додаємо порожній рядок перед повідомленням про помилку тільки якщо попередній файл не мав помилок
+        if (!previousFileHadErrors) {
+          log('');
+        }
         log(
           chalk.red.bold(
-            '[ПОМИЛКА] Валідація CSS зупинена через виявлення невалідного файлу'
+            `[ПОМИЛКА] Виявлено невалідний CSS файл: ${path.posix.normalize(
+              file.split(path.sep).join('/')
+            )}`
           )
         );
         log('');
-        log(chalk.yellow('Завершуємо валідацію...'));
-        log('');
-        return null;
       }
+
+      // Виводимо результат валідації
+      displayCssValidationResult(log, file, result);
+
+      // Додаємо порожній рядок після звіту про помилки, але тільки якщо файл невалідний
+      if (!result.valid) {
+        log('');
+      }
+
+      // Оновлюємо статус помилок для наступної ітерації
+      previousFileHadErrors = !result.valid;
     } catch (err) {
       displayError(log, `Помилка читання CSS файлу ${file}`, err);
       log(chalk.yellow('Переходимо до наступного файлу...'));
