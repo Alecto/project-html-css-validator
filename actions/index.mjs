@@ -31,6 +31,7 @@ async function htmlValidation() {
     return null;
   }
   printTitle(log, filesFiltered.length, 'HTML');
+  log(chalk.green('Виведення результатів валідації:'));
 
   for (const file of filesFiltered) {
     try {
@@ -59,7 +60,6 @@ async function htmlValidation() {
       }
 
       // Виводимо результат
-      log(chalk.green('Виведення результатів валідації:'));
       w3cHtmlValidator.reporter(result, {
         continueOnFail: true,
         maxMessageLen: 200
@@ -112,6 +112,7 @@ async function cssValidation() {
     return null;
   }
   printTitle(log, filesFiltered.length, 'CSS');
+  log(chalk.green('Виведення результатів валідації:'));
 
   for (const file of filesFiltered) {
     try {

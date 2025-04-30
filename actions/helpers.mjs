@@ -304,7 +304,6 @@ export async function validateContentWithRetries(
 ) {
   // Спроба 1 (без затримки)
   try {
-    logger(chalk.dim(`Валідація ${fileType} вмісту...`));
     const result = await validatorFn(content);
 
     // Перевіряємо чи успішна валідація
